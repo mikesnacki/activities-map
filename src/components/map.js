@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { isEqual, omit, functions } from 'lodash'
 
-
-
-
-
 function Map({ onMount, className }) {
     const props = { ref: useRef(), className }
 
@@ -14,7 +10,7 @@ function Map({ onMount, className }) {
                 lat: 42.8962176,
                 lng: -78.8344822
             },
-            zoom: 14,
+            zoom: 15,
         }
     })
 
@@ -23,50 +19,38 @@ function Map({ onMount, className }) {
         onMount && onMount(map)
     }
 
-    function usePosition() {
+    const usePosition = () => {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function (position) {
-                var pos = {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const pos = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude
                 };
-                console.log(pos.latitude, pos.longitude)
-                setCoords({
-                    options: {
-                        center: {
-                            lat: pos.latitude,
-                            lng: pos.longitude
-                        },
-                        zoom: 14,
+                setCoords((prevState) => ({
+                    ...prevState,
+                    center: {
+                        lat: pos.latitude,
+                        lng: pos.longitude
                     }
-                })
-            }, function () {
+                }
+                ))
             });
         } else {
-            setCoords({
-                options: {
-                    center: {
-                        lat: 42.8962176,
-                        lng: -78.8344822
-                    },
-                    zoom: 14,
-                }
-            })
+            setCoords((prevState) => ({
+                ...prevState,
+                center: {
+                    lat: 42.8962176,
+                    lng: -78.8344822
+                },
+            }))
         }
-    }
-    function handleLocationError(browserHasGeolocation, infoWindow, pos) {
-        infoWindow.setPosition(pos);
-        infoWindow.setContent(browserHasGeolocation ?
-            'Error: The Geolocation service failed.' :
-            'Error: Your browser doesn\'t support geolocation.');
     }
 
     useEffect(() => {
         if (!window.google) {
             const script = document.createElement(`script`)
             script.type = `text/javascript`
-            script.src =
-                `https://maps.google.com/maps/api/js?key=` +
+            script.src = `https://maps.google.com/maps/api/js?key=` +
                 process.env.REACT_APP_GOOGLE_APIKEY + `&libraries=places`
             const headScript = document.getElementsByTagName(`script`)[0]
             headScript.parentNode.insertBefore(script, headScript)
@@ -74,7 +58,6 @@ function Map({ onMount, className }) {
             return () => script.removeEventListener(`load`, onLoad)
         } else onLoad()
     })
-
 
     return (
         <div>
