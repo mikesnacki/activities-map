@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { isEqual, omit, functions } from 'lodash'
 
-function Map({ onMount, className }) {
-    const props = { ref: useRef(), className }
+/*global google*/
+
+function Map() {
+
+    const googleMapRef = useRef()
+    const autoCompleteRef = useRef()
 
     const [coords, setCoords] = useState({
         options: {
@@ -11,12 +15,67 @@ function Map({ onMount, className }) {
                 lng: -78.8344822
             },
             zoom: 15,
-        }
+        },
+        address: ""
+    })
+    const [address, setAddress] = useState("")
+
+    useEffect(() => {
+        if (!window.google) {
+            const googleScript = document.createElement(`script`)
+            googleScript.src = `https://maps.google.com/maps/api/js?key=` +
+                process.env.REACT_APP_GOOGLE_APIKEY + `&libraries=places`
+            window.document.body.appendChild(googleScript)
+            googleScript.addEventListener(`load`, (onLoad, usePosition))
+            return () => {
+                googleScript.removeEventListener(`load`, (onLoad, usePosition))
+            }
+        } else onLoad()
     })
 
     const onLoad = () => {
-        const map = new window.google.maps.Map(props.ref.current, coords)
-        onMount && onMount(map)
+        new window.google.maps.Map(googleMapRef.current, coords)
+    }
+
+    const onChange = e => {
+        e.preventDefault()
+        setAddress(e.target.value)
+
+        new window.google.maps.places.Autocomplete(autoCompleteRef.current,
+            {
+                "types": ["geocode"]
+            })
+    }
+
+    const handleSubmit = e => {
+        e.preventDefault()
+        codeAddress()
+    }
+
+    const codeAddress = () => {
+        const geocoder = new google.maps.Geocoder();
+        var searchaddress = document.getElementById("searchTextField").value
+
+        geocoder.geocode({ 'address': searchaddress }, function (results, status) {
+            if (status === google.maps.GeocoderStatus.OK) {
+
+                const newLat = results[0].geometry.location.lat()
+                const newLong = results[0].geometry.location.lng()
+                setAddress(searchaddress)
+                setCoords((prevState) => ({
+                    ...prevState,
+                    center: {
+                        lat: newLat,
+                        lng: newLong
+                    },
+                }
+                ))
+            }
+
+            else {
+                alert("Geocode was not successful for the following reason: " + status);
+            }
+        });
     }
 
     const usePosition = () => {
@@ -46,24 +105,27 @@ function Map({ onMount, className }) {
         }
     }
 
-    useEffect(() => {
-        if (!window.google) {
-            const script = document.createElement(`script`)
-            script.type = `text/javascript`
-            script.src = `https://maps.google.com/maps/api/js?key=` +
-                process.env.REACT_APP_GOOGLE_APIKEY + `&libraries=places`
-            const headScript = document.getElementsByTagName(`script`)[0]
-            headScript.parentNode.insertBefore(script, headScript)
-            script.addEventListener(`load`, onLoad)
-            return () => script.removeEventListener(`load`, onLoad)
-        } else onLoad()
-    })
-
     return (
-        <div>
+        <div
+            onLoad={usePosition}
+        >
+            <form
+                onSubmit={handleSubmit}
+                action="submit">
+                <input
+                    name="location"
+                    autoComplete="off"
+                    id="searchTextField"
+                    ref={autoCompleteRef}
+                    value={address}
+                    onChange={onChange}
+                />
+                <button type="submit">Search</button>
+            </form>
             <button onClick={usePosition}>Update Location</button>
             <div
-                {...props}
+                id="google-map"
+                ref={googleMapRef}
                 style={{ height: `70vh`, margin: `1em 0`, borderRadius: `0.5em` }}
             />
         </div>
